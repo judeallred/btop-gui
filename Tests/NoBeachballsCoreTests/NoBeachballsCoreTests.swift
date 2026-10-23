@@ -1,5 +1,5 @@
 import XCTest
-@testable import BtopCore
+@testable import NoBeachballsCore
 
 final class HealthTests: XCTestCase {
     func testCalmSystemIsOK() {

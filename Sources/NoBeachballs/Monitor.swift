@@ -1,5 +1,5 @@
 import AppKit
-import BtopCore
+import NoBeachballsCore
 import Combine
 import Darwin
 
@@ -47,7 +47,7 @@ final class Monitor: ObservableObject {
         didSet { if isVisible != oldValue { reschedule() } }
     }
 
-    private let queue = DispatchQueue(label: "btop-gui.sampler", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "nobeachballs.sampler", qos: .userInitiated)
     // Sampler, evaluator and engine are touched only on `queue`.
     private nonisolated(unsafe) let processSampler = ProcessSampler()
     private nonisolated(unsafe) let systemSampler = SystemSampler()

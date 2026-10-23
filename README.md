@@ -1,13 +1,13 @@
-# btop-gui
+# NoBeachballs
 
 A macOS menu bar app that answers one question fast: **what is slowing my Mac down, and can I pause or kill it?**
 It also auto-throttles runaway jobs *before* the UI starts beachballing, which matters if you run lots of parallel AI agents, builds and test suites.
 
-- **Menu bar icon** shows system health at a glance:
-  - gauge: fine
-  - tortoise: auto-throttle is currently holding something back (the number is how many jobs are paused)
-  - orange ⚠︎: strained (the phase right before lag; auto-throttle acts here)
-  - red ⚠︎: lagging
+- **Menu bar icon**: a gauge whose needle follows load (CPU or memory, whichever is closer to running out). A badge in its corner flags trouble:
+  - no badge: Calm or Choppy
+  - teal tortoise: auto-throttle is holding something back
+  - orange ⚠︎: Rough (the phase right before beachballs; auto-throttle acts here)
+  - red ⚠︎: Beachball (the system is lagging)
 - **Click** for a btop-style view: CPU and per-core meters, memory/pressure/swap, scheduling delay, the top CPU and top memory consumer with **Pause / Kill** buttons, and a full process list.
 - **Right-click** for quick actions: auto-throttle mode, resume everything, launch at login, quit.
 
@@ -16,8 +16,8 @@ It also auto-throttles runaway jobs *before* the UI starts beachballing, which m
 Requires macOS 14+ and Xcode (or the Swift toolchain).
 
 ```sh
-git clone git@github.com:judeallred/btop-gui.git
-cd btop-gui
+git clone git@github.com:judeallred/nobeachballs.git
+cd nobeachballs
 make install      # builds, installs to /Applications, launches
 ```
 
@@ -25,7 +25,7 @@ Enable **Launch at login** from the gear menu or the right-click menu.
 
 ## Processes are grouped into jobs
 
-Parallel AI work creates hundreds of small processes, so judging them one at a time is useless. btop-gui groups them:
+Parallel AI work creates hundreds of small processes, so judging them one at a time is useless. NoBeachballs groups them:
 
 - **Apps**: an app plus all its helpers (Chrome's 45 renderers count as one "Google Chrome" row).
 - **Jobs**: command-line process trees. A job starts at the topmost process below a shell or app. For example, `claude → zsh → npm run build → node` produces a `claude` job and a separate `npm` job, so you can pause the build without freezing the agent (or the reverse).
@@ -37,7 +37,7 @@ Pause and kill act on the whole group. Expand a group to act on individual proce
 
 Several signals are combined, with hysteresis: health rises quickly and falls only after several calm samples.
 
-| Signal | Strained | Lagging |
+| Signal | Rough | Beachball |
 |---|---|---|
 | Scheduling delay of a high-priority thread | ≥ 40 ms | ≥ 150 ms |
 | Paging memory back in (swap-in) | ≥ 24 MB/s | ≥ 96 MB/s |
@@ -79,7 +79,7 @@ You can still pause or kill any of these manually.
 
 ### Safety
 
-- Everything paused or deprioritized is written to `~/Library/Application Support/btop-gui/throttled.json`.
+- Everything paused or deprioritized is written to `~/Library/Application Support/NoBeachballs/throttled.json`.
 - Quitting, `SIGTERM`, logout, and turning auto-throttle off all resume everything. If the app crashes or is force-killed, the next launch resumes whatever the file lists.
 - Processes are tracked by PID *and* start time, so a recycled PID is never signalled.
 
@@ -93,12 +93,22 @@ You can still pause or kill any of these manually.
 
 ```sh
 make test     # unit + integration tests
-make app      # build/btop-gui.app
+make app      # build/NoBeachballs.app
 make run      # build and open
-build/btop-gui.app/Contents/MacOS/BtopGUI --snapshot out.png   # render the window to a PNG
+build/NoBeachballs.app/Contents/MacOS/NoBeachballs --snapshot out.png        # render the window to a PNG
+build/NoBeachballs.app/Contents/MacOS/NoBeachballs --icon-snapshot icons.png # render every icon state
 ```
 
 Layout:
 
-- `Sources/BtopCore`: sampling (libproc/mach), health evaluation, grouping, the throttle engine. No UI.
-- `Sources/BtopGUI`: menu bar item, popover, SwiftUI views.
+- `Sources/NoBeachballsCore`: sampling (libproc/mach), health evaluation, grouping, the throttle engine. No UI.
+- `Sources/NoBeachballs`: menu bar item, popover, SwiftUI views.
+
+## License
+
+NoBeachballs is **source-available** under the [Prosperity Public License 3.0.0](LICENSE): free for
+personal and noncommercial use. **Using it at work?** Your company gets a 30-day trial, then needs
+a license. It's a small expense that funds independent software; see
+[LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md).
+
+Contributions are welcome under the [CLA](CLA.md); see [CONTRIBUTING.md](CONTRIBUTING.md).

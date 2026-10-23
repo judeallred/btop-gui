@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.judeallred.btop-gui</string>
+	<string>com.judeallred.nobeachballs</string>
 	<key>CFBundleName</key>
-	<string>btop-gui</string>
+	<string>NoBeachballs</string>
 	<key>CFBundleDisplayName</key>
-	<string>btop-gui</string>
+	<string>NoBeachballs</string>
 	<key>CFBundleExecutable</key>
-	<string>BtopGUI</string>
+	<string>NoBeachballs</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>

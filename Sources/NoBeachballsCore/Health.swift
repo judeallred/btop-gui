@@ -14,10 +14,10 @@ public enum HealthLevel: Int, Comparable, Codable, Sendable {
 
     public var label: String {
         switch self {
-        case .ok: "OK"
-        case .elevated: "Busy"
-        case .strained: "Strained"
-        case .lagging: "Lagging"
+        case .ok: "Calm"
+        case .elevated: "Choppy"
+        case .strained: "Rough"
+        case .lagging: "Beachball"
         }
     }
 }
@@ -59,6 +59,13 @@ public struct HealthReport: Sendable, Equatable {
     public var memoryDriven: Bool
     /// CPU contention is a cause. Deprioritizing helps.
     public var cpuDriven: Bool
+
+    public init(level: HealthLevel, reasons: [String], memoryDriven: Bool, cpuDriven: Bool) {
+        self.level = level
+        self.reasons = reasons
+        self.memoryDriven = memoryDriven
+        self.cpuDriven = cpuDriven
+    }
 
     public static let ok = HealthReport(level: .ok, reasons: [], memoryDriven: false, cpuDriven: false)
 }

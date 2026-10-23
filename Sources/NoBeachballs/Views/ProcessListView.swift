@@ -1,4 +1,4 @@
-import BtopCore
+import NoBeachballsCore
 import SwiftUI
 
 enum ListMode: String, CaseIterable {

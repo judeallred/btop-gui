@@ -13,8 +13,8 @@ public final class ResponsivenessProbe: @unchecked Sendable {
     private let window: Int
     private let interval: TimeInterval
     private var timer: DispatchSourceTimer?
-    private let timerQueue = DispatchQueue(label: "btop-gui.probe.timer", qos: .userInteractive)
-    private let target = DispatchQueue(label: "btop-gui.probe.target", qos: .userInteractive)
+    private let timerQueue = DispatchQueue(label: "nobeachballs.probe.timer", qos: .userInteractive)
+    private let target = DispatchQueue(label: "nobeachballs.probe.target", qos: .userInteractive)
 
     public init(interval: TimeInterval = 0.25, window: Int = 8) {
         self.interval = interval

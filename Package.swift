@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "BtopGUI",
+    name: "NoBeachballs",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "BtopCore"),
-        .executableTarget(name: "BtopGUI", dependencies: ["BtopCore"]),
-        .testTarget(name: "BtopCoreTests", dependencies: ["BtopCore"]),
+        .target(name: "NoBeachballsCore"),
+        .executableTarget(name: "NoBeachballs", dependencies: ["NoBeachballsCore"]),
+        .testTarget(name: "NoBeachballsCoreTests", dependencies: ["NoBeachballsCore"]),
     ]
 )

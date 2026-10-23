@@ -13,7 +13,7 @@ install:
 	scripts/install.sh
 
 run: app
-	open build/btop-gui.app
+	open build/NoBeachballs.app
 
 clean:
 	rm -rf .build build

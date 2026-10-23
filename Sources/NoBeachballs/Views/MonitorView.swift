@@ -1,4 +1,4 @@
-import BtopCore
+import NoBeachballsCore
 import SwiftUI
 
 struct MonitorView: View {
@@ -45,7 +45,7 @@ struct HeaderView: View {
             .background(Theme.level(level).opacity(0.15))
             .clipShape(Capsule())
 
-            Text(monitor.report.reasons.isEmpty ? "plenty of headroom" : monitor.report.reasons.joined(separator: " · "))
+            Text(monitor.report.reasons.isEmpty ? "smooth sailing" : monitor.report.reasons.joined(separator: " · "))
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.dim)
                 .lineLimit(1)
@@ -72,7 +72,7 @@ struct HeaderView: View {
                     }
                 }
                 Divider()
-                Button("Quit btop-gui") { NSApp.terminate(nil) }
+                Button("Quit NoBeachballs") { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "gearshape")
             }
