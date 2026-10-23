@@ -22,9 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var signalSources: [DispatchSourceSignal] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        monitor = Monitor()
-
-        // `NoBeachballs --snapshot out.png` renders the window to a PNG and exits (for docs and testing).
+        // `--snapshot out.png` renders the window and `--icon-snapshot out.png` every icon state,
+        // then exit (for docs and testing). Both only observe; they never throttle anything.
         let args = CommandLine.arguments
         if let flag = args.firstIndex(of: "--icon-snapshot"), flag + 1 < args.count {
             StatusItemController.renderStates(to: URL(fileURLWithPath: args[flag + 1]))
@@ -32,10 +31,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if let flag = args.firstIndex(of: "--snapshot"), flag + 1 < args.count {
+            monitor = Monitor(controlsProcesses: false)
             snapshot(to: URL(fileURLWithPath: args[flag + 1]))
             return
         }
 
+        // Two copies would fight over the same processes and ledger, so only one runs.
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .filter { $0.processIdentifier != getpid() }
+        if !others.isEmpty {
+            NSLog("NoBeachballs: another copy is already running (pid \(others[0].processIdentifier)); exiting")
+            NSApp.terminate(nil)
+            return
+        }
+
+        monitor = Monitor()
 
         statusItem = StatusItemController(monitor: monitor)
 

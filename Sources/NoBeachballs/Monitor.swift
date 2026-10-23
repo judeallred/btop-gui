@@ -20,8 +20,10 @@ final class Monitor: ObservableObject {
     /// CPU (% of one core) not attributable to readable processes: root daemons and the kernel.
     @Published private(set) var unattributedCPU = 0.0
     @Published private(set) var cpuHistory: [Double] = []
+    /// Memory load: 1 − the kernel's "available" fraction.
     @Published private(set) var memHistory: [Double] = []
-    @Published private(set) var latencyHistory: [Double] = []
+    /// Swap traffic (in + out), bytes per second.
+    @Published private(set) var swapHistory: [Double] = []
     @Published private(set) var latencyMs = 0.0
     @Published private(set) var autoPaused: [ThrottledJob] = []
     @Published private(set) var deprioritized = Set<ProcessKey>()
@@ -29,6 +31,7 @@ final class Monitor: ObservableObject {
 
     @Published var mode: ThrottleMode {
         didSet {
+            guard controlsProcesses else { return }
             UserDefaults.standard.set(mode.rawValue, forKey: "throttleMode")
             let mode = mode
             queue.async { self.engine.config.mode = mode }
@@ -63,15 +66,22 @@ final class Monitor: ObservableObject {
     private nonisolated(unsafe) var manualPauses = Set<ProcessKey>()
     private nonisolated(unsafe) var savedLedger = ThrottleLedger()
 
-    init() {
+    /// When false (snapshot and test modes) the monitor only observes: it never signals,
+    /// reprioritizes or touches the ledger, so it can't interfere with the running app.
+    private let controlsProcesses: Bool
+
+    init(controlsProcesses: Bool = true) {
+        self.controlsProcesses = controlsProcesses
         let mode = ThrottleMode(rawValue: UserDefaults.standard.string(forKey: "throttleMode") ?? "") ?? .full
         self.mode = mode
         protectedNames = UserDefaults.standard.stringArray(forKey: "protectedNames") ?? []
-        engine = ThrottleEngine(config: ThrottleConfig(mode: mode))
+        engine = ThrottleEngine(config: ThrottleConfig(mode: controlsProcesses ? mode : .off))
 
         // Undo anything a previous run left paused (crash, force quit).
-        let recovered = ThrottleLedger.releaseAll()
-        if recovered > 0 { log("Resumed \(recovered) process(es) left paused by a previous run", auto: true) }
+        if controlsProcesses {
+            let recovered = ThrottleLedger.releaseAll()
+            if recovered > 0 { log("Resumed \(recovered) process(es) left paused by a previous run", auto: true) }
+        }
 
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
@@ -105,13 +115,15 @@ final class Monitor: ObservableObject {
         let tree = ProcessTree(processes)
         let groups = Grouping.groups(processes, tree: tree, rules: rules)
 
-        let actions = engine.step(report: report, groups: groups, rules: rules)
-        let messages = actions.map(perform)
-        var ledger = engine.ledger
-        ledger.paused += manualPauses.filter(ProcessControl.isAlive)
-        if ledger != savedLedger {
-            ledger.save()
-            savedLedger = ledger
+        var messages: [String] = []
+        if controlsProcesses {
+            messages = engine.step(report: report, groups: groups, rules: rules).map(perform)
+            var ledger = engine.ledger
+            ledger.paused += manualPauses.filter(ProcessControl.isAlive)
+            if ledger != savedLedger {
+                ledger.save()
+                savedLedger = ledger
+            }
         }
 
         let readableCPU = processes.reduce(0) { $0 + ($1.isAccessible ? $1.cpu : 0) }
@@ -130,8 +142,8 @@ final class Monitor: ObservableObject {
                 self.unattributedCPU = unattributed
                 if publishProcesses { self.groups = visibleGroups }
                 self.push(&self.cpuHistory, system.cpuTotal)
-                self.push(&self.memHistory, system.memTotal > 0 ? Double(system.memUsed) / Double(system.memTotal) : 0)
-                self.push(&self.latencyHistory, latency)
+                self.push(&self.memHistory, 1 - Double(system.memAvailablePercent) / 100)
+                self.push(&self.swapHistory, system.swapInRate + system.swapOutRate)
                 for message in messages { self.log(message, auto: true) }
             }
         }
@@ -240,6 +252,7 @@ final class Monitor: ObservableObject {
 
     /// Called on quit: never leave anything frozen behind.
     nonisolated func releaseAllSync() {
+        guard controlsProcesses else { return }
         queue.sync {
             for action in engine.releaseAll() { _ = perform(action) }
             ProcessControl.send(SIGCONT, to: Array(manualPauses))

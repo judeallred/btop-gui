@@ -10,8 +10,8 @@ cd "$(dirname "$0")/.."
 ARCH_FLAGS=()
 if [ "${UNIVERSAL:-}" = 1 ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
 
-swift build -c release --product NoBeachballs "${ARCH_FLAGS[@]}"
-BIN="$(swift build -c release --show-bin-path "${ARCH_FLAGS[@]}")/NoBeachballs"
+swift build -c release --product NoBeachballs ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}
+BIN="$(swift build -c release --show-bin-path ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"})/NoBeachballs"
 APP="build/NoBeachballs.app"
 
 rm -rf "$APP"

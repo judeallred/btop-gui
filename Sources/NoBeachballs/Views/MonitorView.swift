@@ -10,9 +10,10 @@ struct MonitorView: View {
             HStack(spacing: 8) {
                 CPUPanel(monitor: monitor)
                 MemoryPanel(monitor: monitor)
-                ResponsivenessPanel(monitor: monitor)
+                SwapLagPanel(monitor: monitor)
             }
             .frame(height: 150)
+            .clipped()
             CulpritView(monitor: monitor)
             if !monitor.autoPaused.isEmpty || !monitor.events.isEmpty {
                 ThrottlePanel(monitor: monitor)
@@ -44,11 +45,15 @@ struct HeaderView: View {
             .padding(.vertical, 3)
             .background(Theme.level(level).opacity(0.15))
             .clipShape(Capsule())
+            .fixedSize()
 
-            Text(monitor.report.reasons.isEmpty ? "smooth sailing" : monitor.report.reasons.joined(separator: " · "))
+            let reasons = monitor.report.reasons.joined(separator: " · ")
+            Text(reasons.isEmpty ? "smooth sailing" : reasons)
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.dim)
                 .lineLimit(1)
+                .truncationMode(.tail)
+                .help(monitor.report.reasons.joined(separator: "\n"))
 
             Spacer()
 
@@ -88,20 +93,37 @@ struct CPUPanel: View {
     @ObservedObject var monitor: Monitor
 
     var body: some View {
-        let cores = monitor.system?.perCore ?? []
-        Panel(title: "cpu", trailing: String(format: "%.0f%%", (monitor.system?.cpuTotal ?? 0) * 100)) {
-            Sparkline(values: monitor.cpuHistory).frame(height: 44)
-            let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
-                ForEach(Array(cores.enumerated()), id: \.offset) { i, usage in
-                    HStack(spacing: 4) {
-                        Text("C\(i)").font(Theme.mono(9)).foregroundStyle(Theme.dim).frame(width: 22, alignment: .leading)
-                        MeterBar(fraction: usage, height: 5)
-                        Text(String(format: "%3.0f", usage * 100)).font(Theme.mono(9)).frame(width: 22, alignment: .trailing)
+        let s = monitor.system
+        let trailing = String(format: "%.0f%% · load %.1f", (s?.cpuTotal ?? 0) * 100, s?.loadAverage.first ?? 0)
+        Panel(title: "cpu", trailing: trailing) {
+            Sparkline(values: monitor.cpuHistory).frame(height: 48)
+            CoreBars(usage: s?.perCore ?? [])
+        }
+    }
+}
+
+/// One thin vertical meter per core, btop-style.
+struct CoreBars: View {
+    let usage: [Double]
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(Array(usage.enumerated()), id: \.offset) { i, value in
+                VStack(spacing: 2) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .bottom) {
+                            RoundedRectangle(cornerRadius: 1.5).fill(Color.white.opacity(0.07))
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Theme.meter(value))
+                                .frame(height: max(1, geo.size.height * CGFloat(min(value, 1))))
+                        }
                     }
+                    Text("\(i)").font(Theme.mono(8)).foregroundStyle(Theme.dim)
                 }
+                .help(String(format: "core %d: %.0f%%", i, value * 100))
             }
         }
+        .frame(maxHeight: .infinity)
     }
 }
 
@@ -110,22 +132,18 @@ struct MemoryPanel: View {
 
     var body: some View {
         let s = monitor.system
-        let total = Double(s?.memTotal ?? 1)
-        let used = Double(s?.memUsed ?? 0)
         Panel(title: "mem", trailing: "\(ByteFormat.short(s?.memUsed ?? 0)) / \(ByteFormat.short(s?.memTotal ?? 0))") {
-            MeterBar(fraction: used / total, height: 9)
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
+            Sparkline(values: monitor.memHistory).frame(height: 48)
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 2) {
                 row("pressure", s?.pressure.label ?? "—",
                     color: s?.pressure == .critical ? Theme.red : s?.pressure == .warning ? Theme.yellow : Theme.green)
                 row("available", "\(s?.memAvailablePercent ?? 0)%",
                     color: Theme.meter(1 - Double(s?.memAvailablePercent ?? 100) / 100))
-                row("app / wired", "\(ByteFormat.short(s?.memApp ?? 0)) / \(ByteFormat.short(s?.memWired ?? 0))")
                 row("compressed", ByteFormat.short(s?.memCompressed ?? 0))
-                row("swap", "\(ByteFormat.short(s?.swapUsed ?? 0)) / \(ByteFormat.short(s?.swapTotal ?? 0))",
+                row("swap used", "\(ByteFormat.short(s?.swapUsed ?? 0)) / \(ByteFormat.short(s?.swapTotal ?? 0))",
                     color: (s?.swapUsed ?? 0) > (s?.memTotal ?? 0) / 2 ? Theme.yellow : Theme.text)
-                row("swapping", "out \(ByteFormat.short(s?.swapOutRate ?? 0))/s · in \(ByteFormat.short(s?.swapInRate ?? 0))/s",
-                    color: (s?.swapOutRate ?? 0) > 8_000_000 ? Theme.red : Theme.text)
             }
+            .help("Chart: memory load (100% − what macOS reports as available).\nApp \(ByteFormat.short(s?.memApp ?? 0)) · wired \(ByteFormat.short(s?.memWired ?? 0)) · compressed \(ByteFormat.short(s?.memCompressed ?? 0))")
         }
     }
 
@@ -137,37 +155,34 @@ struct MemoryPanel: View {
     }
 }
 
-struct ResponsivenessPanel: View {
+struct SwapLagPanel: View {
     @ObservedObject var monitor: Monitor
 
     var body: some View {
         let s = monitor.system
-        Panel(title: "responsiveness", trailing: String(format: "%.0f ms", monitor.latencyMs)) {
-            Sparkline(values: monitor.latencyHistory, max: 200).frame(height: 44)
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
-                GridRow {
-                    Text("sched delay").font(Theme.mono(10)).foregroundStyle(Theme.dim)
-                    Text(String(format: "%.0f ms", monitor.latencyMs)).font(Theme.mono(10, .semibold))
-                        .foregroundStyle(monitor.latencyMs > 150 ? Theme.red : monitor.latencyMs > 40 ? Theme.yellow : Theme.green)
-                }
-                GridRow {
-                    Text("load avg").font(Theme.mono(10)).foregroundStyle(Theme.dim)
-                    Text((s?.loadAverage ?? []).map { String(format: "%.2f", $0) }.joined(separator: " "))
-                        .font(Theme.mono(10, .semibold))
-                }
-                GridRow {
-                    Text("thermal").font(Theme.mono(10)).foregroundStyle(Theme.dim)
-                    let thermal = s?.thermalState ?? 0
-                    Text(["nominal", "fair", "serious", "critical"][min(thermal, 3)]).font(Theme.mono(10, .semibold))
-                        .foregroundStyle(thermal >= 2 ? Theme.red : Theme.text)
-                }
-                GridRow {
-                    Text("system cpu").font(Theme.mono(10)).foregroundStyle(Theme.dim)
-                    Text(percent(monitor.unattributedCPU))
-                        .font(Theme.mono(10, .semibold))
-                }
+        let swapRate = (s?.swapInRate ?? 0) + (s?.swapOutRate ?? 0)
+        // Scale to recent peaks, but never so low that background noise looks alarming.
+        let scale = max(32 * 1024 * 1024, monitor.swapHistory.max() ?? 0)
+        Panel(title: "swap · lag", trailing: "\(ByteFormat.short(swapRate))/s") {
+            Sparkline(values: monitor.swapHistory, max: scale).frame(height: 48)
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 2) {
+                row("swap in / out", "\(ByteFormat.short(s?.swapInRate ?? 0))/s · \(ByteFormat.short(s?.swapOutRate ?? 0))/s",
+                    color: swapRate > 24_000_000 ? Theme.red : swapRate > 8_000_000 ? Theme.yellow : Theme.text)
+                row("sched delay", String(format: "%.0f ms", monitor.latencyMs),
+                    color: monitor.latencyMs > 150 ? Theme.red : monitor.latencyMs > 40 ? Theme.yellow : Theme.green)
+                row("system cpu", percent(monitor.unattributedCPU))
+                let thermal = s?.thermalState ?? 0
+                row("thermal", ["nominal", "fair", "serious", "critical"][min(thermal, 3)],
+                    color: thermal >= 2 ? Theme.red : Theme.text)
             }
-            .help("Sched delay: how long a high-priority thread waits for a CPU — it spikes right before apps beachball.\nSystem CPU: CPU used by root-owned daemons and the kernel, which can't be read per process without root.")
+            .help("Swap in: apps waiting on memory that was moved to disk — the classic beachball.\nSched delay: how long a high-priority thread waits for a CPU.\nSystem CPU: root-owned daemons and the kernel, which can't be read per process without root.")
+        }
+    }
+
+    private func row(_ label: String, _ value: String, color: Color = Theme.text) -> some View {
+        GridRow {
+            Text(label).font(Theme.mono(10)).foregroundStyle(Theme.dim)
+            Text(value).font(Theme.mono(10, .semibold)).foregroundStyle(color)
         }
     }
 }
@@ -305,17 +320,19 @@ struct ThrottlePanel: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(monitor.events.prefix(4)) { event in
-                        Text("\(event.date.formatted(date: .omitted, time: .standard))  \(event.text)")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(event.isAuto ? Theme.text : Theme.dim)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        HStack(spacing: 8) {
+                            Text(event.date.formatted(date: .omitted, time: .standard)).foregroundStyle(Theme.dim)
+                            Text(event.text).foregroundStyle(event.isAuto ? Theme.text : Theme.dim)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        .font(Theme.mono(10))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(height: max(70, CGFloat(min(max(monitor.autoPaused.count, monitor.events.prefix(4).count), 4)) * 20 + 34))
+        .frame(height: CGFloat(min(max(monitor.autoPaused.count, monitor.events.prefix(4).count, 1), 4)) * 18 + 36)
     }
 
     private var summary: String {
