@@ -1,0 +1,113 @@
+name: Release
+
+# Pushing a tag like v0.2.0 publishes a GitHub release with a universal NoBeachballs.app.
+#
+# Signing is optional. Without these secrets the app is ad-hoc signed and macOS asks users to
+# approve it on first launch. With them it's signed with a Developer ID and notarized, which
+# the official Homebrew cask repository requires:
+#   DEVELOPER_ID_CERTIFICATE           the "Developer ID Application" certificate as a base64 .p12
+#   DEVELOPER_ID_CERTIFICATE_PASSWORD  the .p12's password
+#   APPLE_ID, APPLE_TEAM_ID            the Apple account and team that notarize
+#   APPLE_APP_PASSWORD                 an app-specific password for that Apple account
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      SIGNED: ${{ secrets.DEVELOPER_ID_CERTIFICATE != '' }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the tag matches the version
+        run: |
+          version=$(scripts/version.sh)
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::tag $TAG doesn't match version $version in Resources/Info.plist"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: swift test
+
+      - name: Import the Developer ID certificate
+        if: env.SIGNED == 'true'
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(uuidgen)
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          rm "$RUNNER_TEMP/certificate.p12"
+          identity=$(security find-identity -v -p codesigning "$keychain" \
+            | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)
+          if [ -z "$identity" ]; then
+            echo "::error::no Developer ID Application identity in the certificate"
+            exit 1
+          fi
+          echo "CODESIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - run: UNIVERSAL=1 scripts/build-app.sh
+
+      - name: Notarize
+        if: env.SIGNED == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          submission="$RUNNER_TEMP/NoBeachballs.zip"
+          ditto -c -k --keepParent build/NoBeachballs.app "$submission"
+          xcrun notarytool submit "$submission" --wait \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
+          xcrun stapler staple build/NoBeachballs.app
+
+      - name: Package
+        run: |
+          mkdir dist
+          ditto -c -k --keepParent build/NoBeachballs.app "dist/NoBeachballs-$VERSION.zip"
+          (cd dist && shasum -a 256 -- * > SHA256SUMS)
+
+      - name: Write the release notes
+        run: |
+          cat > notes.md <<'NOTES'
+          macOS 14 or later, Apple silicon or Intel.
+
+          ### Install
+
+          Unzip, move **NoBeachballs.app** to Applications and open it. It lives in the menu bar.
+          NOTES
+          if [ "$SIGNED" != true ]; then
+            cat >> notes.md <<'NOTES'
+
+          This build isn't signed with a Developer ID yet, so macOS blocks the first launch: open
+          **System Settings → Privacy & Security** and click **Open Anyway**, or run
+          `xattr -dr com.apple.quarantine /Applications/NoBeachballs.app`.
+          NOTES
+          fi
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" dist/* --title "NoBeachballs $VERSION" --notes-file notes.md \
+            --prerelease --verify-tag

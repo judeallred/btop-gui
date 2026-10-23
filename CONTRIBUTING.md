@@ -2,14 +2,7 @@
 
 Thanks for helping out. A few things to know before you open a pull request.
 
-## Contributor License Agreement
-
-NoBeachballs is source-available (Prosperity Public License 3.0.0) and is also sold under commercial
-licenses, which fund its development. To make that possible, every external contributor signs the
-[Contributor License Agreement](CLA.md) once. You keep your copyright.
-
-When you open your first pull request, a bot comments with a link to the CLA. Reply with the
-sentence it asks for and the check turns green. Pull requests can't be merged until it passes.
+Contributions are licensed under the [MIT License](LICENSE), the same as the project.
 
 ## Development setup
 
@@ -26,3 +19,15 @@ make run      # build and open build/NoBeachballs.app
 - Anything that pauses or deprioritizes a process must be recorded in the throttle ledger, so a
   crash never leaves processes frozen.
 - No third-party dependencies without discussion; any that are added must be permissively licensed.
+
+## Releasing
+
+Bump `CFBundleShortVersionString` in `Resources/Info.plist`, commit, then push a matching tag:
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The Release workflow builds a universal `NoBeachballs.app` and publishes it as a GitHub release.
+It signs and notarizes the app once the Developer ID secrets listed in
+`.github/workflows/release.yml` are set; until then the build is ad-hoc signed.

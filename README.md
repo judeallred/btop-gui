@@ -13,6 +13,15 @@ It also auto-throttles runaway jobs *before* the UI starts beachballing, which m
 
 ## Install
 
+Download `NoBeachballs-<version>.zip` from the [latest release](https://github.com/judeallred/nobeachballs/releases/latest),
+unzip it, move **NoBeachballs.app** to Applications and open it. It runs on macOS 14 or later, Apple silicon or Intel.
+
+Until releases are signed with a Developer ID, macOS blocks the first launch. To allow it, open
+**System Settings → Privacy & Security** and click **Open Anyway**, or run
+`xattr -dr com.apple.quarantine /Applications/NoBeachballs.app`.
+
+### Build from source
+
 Requires macOS 14+ and Xcode (or the Swift toolchain).
 
 ```sh
@@ -106,9 +115,4 @@ Layout:
 
 ## License
 
-NoBeachballs is **source-available** under the [Prosperity Public License 3.0.0](LICENSE): free for
-personal and noncommercial use. **Using it at work?** Your company gets a 30-day trial, then needs
-a license. It's a small expense that funds independent software; see
-[LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md).
-
-Contributions are welcome under the [CLA](CLA.md); see [CONTRIBUTING.md](CONTRIBUTING.md).
+[MIT](LICENSE). Contributions welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
