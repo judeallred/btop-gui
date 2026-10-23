@@ -175,3 +175,16 @@ final class ProcessControlIntegrationTests: XCTestCase {
         XCTAssertEqual(ProcessControl.send(SIGSTOP, to: [stale]), 0)
     }
 }
+
+final class AppNameTests: XCTestCase {
+    func testAppGroupsUseTheDisplayName() {
+        let bundle = "/Applications/No Beachballs.app/"
+        var rules = ProtectionRules(ownPID: 1, uid: getuid(), appBundlePaths: [bundle])
+        rules.appNames[bundle] = "No Beachballs"
+        let p = ProcessSample(key: ProcessKey(pid: 500, startTime: 1), ppid: 1, uid: getuid(), name: "nobeachballs",
+                              executable: bundle + "Contents/MacOS/nobeachballs", command: "", cpu: 1, memory: 1,
+                              diskRate: 0, threads: 1, isStopped: false, isAccessible: true)
+        let groups = Grouping.groups([p], tree: ProcessTree([p]), rules: rules)
+        XCTAssertEqual(groups.first?.name, "No Beachballs")
+    }
+}

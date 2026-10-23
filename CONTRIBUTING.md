@@ -1,4 +1,4 @@
-# Contributing to NoBeachballs
+# Contributing to No Beachballs
 
 Thanks for helping out. A few things to know before you open a pull request.
 
@@ -10,7 +10,7 @@ Requires macOS 14+ and Xcode (or the Swift toolchain).
 
 ```sh
 make test     # unit + integration tests
-make run      # build and open build/NoBeachballs.app
+make run      # build and open "build/No Beachballs.app"
 ```
 
 ## Standards
@@ -28,6 +28,6 @@ Bump `CFBundleShortVersionString` in `Resources/Info.plist`, commit, then push a
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-The Release workflow builds a universal `NoBeachballs.app` and publishes it as a GitHub release.
+The Release workflow builds a universal `No Beachballs.app` and publishes it as a GitHub release.
 It signs and notarizes the app once the Developer ID secrets listed in
 `.github/workflows/release.yml` are set; until then the build is ad-hoc signed.

@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a tag like v0.2.0 publishes a GitHub release with a universal NoBeachballs.app.
+# Pushing a tag like v0.2.0 publishes a GitHub release with a universal "No Beachballs.app".
 #
 # Signing is optional. Without these secrets the app is ad-hoc signed and macOS asks users to
 # approve it on first launch. With them it's signed with a Developer ID and notarized, which
@@ -75,16 +75,16 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          submission="$RUNNER_TEMP/NoBeachballs.zip"
-          ditto -c -k --keepParent build/NoBeachballs.app "$submission"
+          submission="$RUNNER_TEMP/nobeachballs.zip"
+          ditto -c -k --keepParent "build/No Beachballs.app" "$submission"
           xcrun notarytool submit "$submission" --wait \
             --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
-          xcrun stapler staple build/NoBeachballs.app
+          xcrun stapler staple "build/No Beachballs.app"
 
       - name: Package
         run: |
           mkdir dist
-          ditto -c -k --keepParent build/NoBeachballs.app "dist/NoBeachballs-$VERSION.zip"
+          ditto -c -k --keepParent "build/No Beachballs.app" "dist/nobeachballs-$VERSION.zip"
           (cd dist && shasum -a 256 -- * > SHA256SUMS)
 
       - name: Write the release notes
@@ -94,14 +94,14 @@ jobs:
 
           ### Install
 
-          Unzip, move **NoBeachballs.app** to Applications and open it. It lives in the menu bar.
+          Unzip, move **No Beachballs** to Applications and open it. It lives in the menu bar.
           NOTES
           if [ "$SIGNED" != true ]; then
             cat >> notes.md <<'NOTES'
 
           This build isn't signed with a Developer ID yet, so macOS blocks the first launch: open
           **System Settings → Privacy & Security** and click **Open Anyway**, or run
-          `xattr -dr com.apple.quarantine /Applications/NoBeachballs.app`.
+          `xattr -dr com.apple.quarantine "/Applications/No Beachballs.app"`.
           NOTES
           fi
 
@@ -109,5 +109,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$TAG" dist/* --title "NoBeachballs $VERSION" --notes-file notes.md \
+          gh release create "$TAG" dist/* --title "No Beachballs $VERSION" --notes-file notes.md \
             --prerelease --verify-tag

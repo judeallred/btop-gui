@@ -2,8 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "NoBeachballs",
+    name: "nobeachballs",
     platforms: [.macOS(.v14)],
+    products: [
+        .executable(name: "nobeachballs", targets: ["NoBeachballs"]),
+    ],
     targets: [
         .target(name: "NoBeachballsCore"),
         .executableTarget(name: "NoBeachballs", dependencies: ["NoBeachballsCore"]),

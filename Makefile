@@ -13,7 +13,7 @@ install:
 	scripts/install.sh
 
 run: app
-	open build/NoBeachballs.app
+	open "build/No Beachballs.app"
 
 clean:
 	rm -rf .build build

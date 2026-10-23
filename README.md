@@ -1,4 +1,4 @@
-# NoBeachballs
+# No Beachballs
 
 A macOS menu bar app that answers one question fast: **what is slowing my Mac down, and can I pause or kill it?**
 It also auto-throttles runaway jobs *before* the UI starts beachballing, which matters if you run lots of parallel AI agents, builds and test suites.
@@ -13,12 +13,12 @@ It also auto-throttles runaway jobs *before* the UI starts beachballing, which m
 
 ## Install
 
-Download `NoBeachballs-<version>.zip` from the [latest release](https://github.com/judeallred/nobeachballs/releases/latest),
-unzip it, move **NoBeachballs.app** to Applications and open it. It runs on macOS 14 or later, Apple silicon or Intel.
+Download `nobeachballs-<version>.zip` from the [latest release](https://github.com/judeallred/nobeachballs/releases/latest),
+unzip it, move **No Beachballs** to Applications and open it. It runs on macOS 14 or later, Apple silicon or Intel.
 
 Until releases are signed with a Developer ID, macOS blocks the first launch. To allow it, open
 **System Settings → Privacy & Security** and click **Open Anyway**, or run
-`xattr -dr com.apple.quarantine /Applications/NoBeachballs.app`.
+`xattr -dr com.apple.quarantine "/Applications/No Beachballs.app"`.
 
 ### Build from source
 
@@ -34,7 +34,7 @@ Enable **Launch at login** from the gear menu or the right-click menu.
 
 ## Processes are grouped into jobs
 
-Parallel AI work creates hundreds of small processes, so judging them one at a time is useless. NoBeachballs groups them:
+Parallel AI work creates hundreds of small processes, so judging them one at a time is useless. No Beachballs groups them:
 
 - **Apps**: an app plus all its helpers (Chrome's 45 renderers count as one "Google Chrome" row).
 - **Jobs**: command-line process trees. A job starts at the topmost process below a shell or app. For example, `claude → zsh → npm run build → node` produces a `claude` job and a separate `npm` job, so you can pause the build without freezing the agent (or the reverse).
@@ -88,7 +88,7 @@ You can still pause or kill any of these manually.
 
 ### Safety
 
-- Everything paused or deprioritized is written to `~/Library/Application Support/NoBeachballs/throttled.json`.
+- Everything paused or deprioritized is written to `~/Library/Application Support/nobeachballs/throttled.json`.
 - Quitting, `SIGTERM`, logout, and turning auto-throttle off all resume everything. If the app crashes or is force-killed, the next launch resumes whatever the file lists.
 - Processes are tracked by PID *and* start time, so a recycled PID is never signalled.
 
@@ -102,10 +102,10 @@ You can still pause or kill any of these manually.
 
 ```sh
 make test     # unit + integration tests
-make app      # build/NoBeachballs.app
+make app      # "build/No Beachballs.app"
 make run      # build and open
-build/NoBeachballs.app/Contents/MacOS/NoBeachballs --snapshot out.png        # render the window to a PNG
-build/NoBeachballs.app/Contents/MacOS/NoBeachballs --icon-snapshot icons.png # render every icon state
+"build/No Beachballs.app/Contents/MacOS/nobeachballs" --snapshot out.png        # render the window to a PNG
+"build/No Beachballs.app/Contents/MacOS/nobeachballs" --icon-snapshot icons.png # render every icon state
 ```
 
 Layout:

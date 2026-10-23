@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
             .filter { $0.processIdentifier != getpid() }
         if !others.isEmpty {
-            NSLog("NoBeachballs: another copy is already running (pid \(others[0].processIdentifier)); exiting")
+            NSLog("nobeachballs: another copy is already running (pid \(others[0].processIdentifier)); exiting")
             NSApp.terminate(nil)
             return
         }
@@ -91,7 +91,7 @@ enum LoginItem {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            NSLog("NoBeachballs: login item change failed: \(error)")
+            NSLog("nobeachballs: login item change failed: \(error)")
         }
     }
 }
@@ -152,7 +152,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate, NSMenuDelegate {
         guard let button = item.button else { return }
         button.image = Self.icon(level: report.level, usage: usage, throttling: throttling)
 
-        var tip = "NoBeachballs — \(report.level.label)"
+        var tip = "No Beachballs — \(report.level.label)"
         tip += String(format: " (%.0f%% load)", usage * 100)
         if !report.reasons.isEmpty { tip += ": " + report.reasons.joined(separator: ", ") }
         if pausedCount > 0 { tip += "\n\(pausedCount) job(s) paused by auto-throttle" }
@@ -290,7 +290,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate, NSMenuDelegate {
         login.target = self
         login.state = LoginItem.isEnabled ? .on : .off
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit NoBeachballs", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit No Beachballs", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         item.menu = menu
         item.button?.performClick(nil)

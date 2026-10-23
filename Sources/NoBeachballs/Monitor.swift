@@ -90,6 +90,10 @@ final class Monitor: ObservableObject {
             }
         }
         refreshRules()
+        // Launch/quit notifications can be missed (or arrive before NSWorkspace updates); re-sync now and then.
+        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshRules() }
+        }
         probe.start()
         reschedule()
     }
@@ -172,14 +176,19 @@ final class Monitor: ObservableObject {
     }
 
     private func refreshRules() {
-        let bundles = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy != .prohibited }
-            .compactMap { $0.bundleURL?.path }
-            .filter { $0.hasSuffix(".app") }
-            .map { $0 + "/" }
+        var appNames: [String: String] = [:]
+        for app in NSWorkspace.shared.runningApplications where app.activationPolicy != .prohibited {
+            guard let path = app.bundleURL?.path, path.hasSuffix(".app") else { continue }
+            // Finder's name ("Visual Studio Code"), not the short process name ("Code").
+            var name = FileManager.default.displayName(atPath: path)
+            if name.hasSuffix(".app") { name = String(name.dropLast(4)) }
+            appNames[path + "/"] = name
+        }
+        let bundles = Array(appNames.keys)
         let names = Set(protectedNames.map { $0.lowercased() })
         queue.async {
             self.rules.appBundlePaths = bundles
+            self.rules.appNames = appNames
             self.rules.protectedNames = names
         }
     }

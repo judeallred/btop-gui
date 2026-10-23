@@ -38,7 +38,7 @@ public struct ThrottleLedger: Codable, Sendable, Equatable {
 
     public static var defaultURL: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("NoBeachballs/throttled.json")
+        return support.appendingPathComponent("nobeachballs/throttled.json")
     }
 
     public static func load(from url: URL = defaultURL) -> ThrottleLedger {

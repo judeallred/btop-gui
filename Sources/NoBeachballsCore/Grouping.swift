@@ -9,6 +9,8 @@ public struct ProtectionRules: Sendable {
     public var appBundlePaths: [String]
     /// Lowercased process names the user never wants auto-throttled.
     public var protectedNames: Set<String>
+    /// Display names of running apps ("No Beachballs"), keyed by bundle path.
+    public var appNames: [String: String] = [:]
 
     public static let systemPrefixes = ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/", "/Library/Apple/"]
     public static let defaultProtectedNames: Set<String> = [
@@ -87,6 +89,8 @@ public struct ProcessGroup: Identifiable, Sendable {
 
     public let id: String
     public let kind: Kind
+    /// For apps, the name macOS displays; otherwise nil.
+    public let appName: String?
     public let root: ProcessSample
     /// Sorted by CPU, descending.
     public let members: [ProcessSample]
@@ -97,7 +101,7 @@ public struct ProcessGroup: Identifiable, Sendable {
 
     public var name: String {
         if case .app(let bundle) = kind {
-            return ((bundle as NSString).lastPathComponent as NSString).deletingPathExtension
+            return appName ?? ((bundle as NSString).lastPathComponent as NSString).deletingPathExtension
         }
         return root.name
     }
@@ -105,9 +109,10 @@ public struct ProcessGroup: Identifiable, Sendable {
     public var isStopped: Bool { !members.isEmpty && members.allSatisfy(\.isStopped) }
     public var anyStopped: Bool { members.contains(where: \.isStopped) }
 
-    public init(id: String, kind: Kind, root: ProcessSample, members: [ProcessSample], isProtected: Bool) {
+    public init(id: String, kind: Kind, root: ProcessSample, members: [ProcessSample], isProtected: Bool, appName: String? = nil) {
         self.id = id
         self.kind = kind
+        self.appName = appName
         self.root = root
         self.members = members.sorted { $0.cpu > $1.cpu }
         self.isProtected = isProtected
@@ -149,7 +154,10 @@ public enum Grouping {
             case .app, .system: isProtected = true
             case .job: isProtected = rules.isProtected(root)
             }
-            return ProcessGroup(id: id, kind: bucket.kind, root: root, members: bucket.members, isProtected: isProtected)
+            var appName: String?
+            if case .app(let bundle) = bucket.kind { appName = rules.appNames[bundle] }
+            return ProcessGroup(id: id, kind: bucket.kind, root: root, members: bucket.members,
+                                isProtected: isProtected, appName: appName)
         }
     }
 

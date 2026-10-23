@@ -77,7 +77,7 @@ struct HeaderView: View {
                     }
                 }
                 Divider()
-                Button("Quit NoBeachballs") { NSApp.terminate(nil) }
+                Button("Quit No Beachballs") { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "gearshape")
             }
